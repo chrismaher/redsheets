@@ -30,7 +30,9 @@ var initCmd = &cobra.Command{
 	Short: "A brief description of your command",
 	Long:  `A longer description that spans multiple lines and likely contains examples`,
 	Run: func(cmd *cobra.Command, args []string) {
-		json.Init()
+		if err := json.Init(); err != nil {
+			fmt.Println(err)
+		}
 	},
 }
 
@@ -40,7 +42,10 @@ var addCmd = &cobra.Command{
 	Short: "A brief description of your command",
 	Long:  `A longer description that spans multiple lines and likely contains examples`,
 	Run: func(cmd *cobra.Command, args []string) {
-		json.Add(json.Table{sheetID, sheetName, schema, name})
+		table := json.Table{sheetID, sheetName, schema, name}
+		if err := json.Add(table); err != nil {
+			fmt.Println(err)
+		}
 	},
 }
 
@@ -60,7 +65,9 @@ var listCmd = &cobra.Command{
 	Short: "A brief description of your command",
 	Long:  `A longer description that spans multiple lines and likely contains examples`,
 	Run: func(cmd *cobra.Command, args []string) {
-		json.List()
+		if err := json.List(); err != nil {
+			fmt.Println(err)
+		}
 	},
 }
 

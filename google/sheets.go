@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	js "github.com/chrismaher/json"
+	"github.com/chrismaher/redsheets/path"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -21,9 +21,7 @@ type Service struct {
 
 // Retrieve a token, saves the token, then returns the generated client.
 func getClient(config *oauth2.Config) *http.Client {
-	// The file token.json stores the user's access and refresh tokens, and is
-	// created automatically when the authorization flow completes for the first
-	// time.
+	// The file token.json stores the user's access and refresh tokens
 	tokFile := "token.json"
 	tok, err := tokenFromFile(tokFile)
 	if err != nil {
@@ -72,27 +70,37 @@ func saveToken(path string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func (s *Service) Authorize() {
-	b, err := ioutil.ReadFile(js.FullPath("client_id.json"))
+func (s *Service) Authorize() error {
+	filePath, err := path.FullPath("client_id.json")
 	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+		return err
+	}
+
+	b, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return err
+		// log.Fatalf("Unable to read client secret file: %v", err)
 	}
 
 	config, err := google.ConfigFromJSON(b, "https://www.googleapis.com/auth/spreadsheets.readonly")
 	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		return err
+		// log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
 	client := getClient(config)
 
 	srv, err := sheets.New(client)
 	if err != nil {
-		log.Fatalf("Unable to retrieve Sheets client: %v", err)
+		return err
+		// log.Fatalf("Unable to retrieve Sheets client: %v", err)
 	}
 
 	s.Client = srv
+	return nil
 }
 
 func (s *Service) GetRange(spreadsheetId string, readRange string) [][]interface{} {
+	log.Printf("Getting range %s", readRange)
 	resp, err := s.Client.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve data from sheet: %v", err)

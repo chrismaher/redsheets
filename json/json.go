@@ -2,11 +2,11 @@ package json
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/chrismaher/redsheets/path"
 	"io/ioutil"
 	"log"
 	"os"
-	"os/user"
-	"path"
 )
 
 type Table struct {
@@ -16,62 +16,91 @@ type Table struct {
 	Name      string `json:"name"`
 }
 
-func FullPath(filename string) string {
-	usr, err := user.Current()
+// Init creates the JSON file in which redsheets will persist Table records
+func Init() error {
+	db, err := path.FullPath(".redsheets.json")
 	if err != nil {
-		log.Println(err)
+		return err
 	}
 
-	home := usr.HomeDir
-	return path.Join(home, filename)
-}
-
-var db = FullPath(".redsheets.json")
-
-func Init() {
 	if _, err := os.Stat(db); os.IsNotExist(err) {
-		err := ioutil.WriteFile(db, []byte("[]"), 0644)
-		if err != nil {
-			log.Fatal(err)
+		if err := ioutil.WriteFile(db, []byte("[]"), 0644); err != nil {
+			return err
 		}
 		log.Printf("%s created", db)
-		return
+		return nil
 	}
-	log.Printf("%s already exists", db)
+
+	return fmt.Errorf("%s already exists", db)
 }
 
-func Read() []Table {
+func parseTables(b []byte) ([]Table, error) {
+	var data []Table
+	if err := json.Unmarshal(b, &data); err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+// Read the JSON file into a slice of Table
+func Read() ([]Table, error) {
+	db, err := path.FullPath(".redsheets.json")
+	if err != nil {
+		return nil, err
+	}
+
 	b, err := ioutil.ReadFile(db)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	var data []Table
-	err = json.Unmarshal(b, &data)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return data
+
+	return parseTables(b)
 }
 
-func List() {
-	tables := Read()
+func List() error {
+	tables, err := Read()
+	if err != nil {
+		return err
+	}
+
 	for _, table := range tables {
 		log.Printf("%+v", table)
 	}
+
+	return nil
 }
 
-func Add(table Table) {
-	data := Read()
+func writeJSON(data []Table) error {
+	db, err := path.FullPath(".redsheets.json")
+	if err != nil {
+		return err
+	}
+
+	tableJSON, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(db, tableJSON, 0644)
+}
+
+func Add(table Table) error {
+	data, err := Read()
+	if err != nil {
+		return nil
+	}
+
 	for _, t := range data {
 		if table.SheetID == t.SheetID {
-			log.Printf("Sheet ID %s is already in db", table.SheetID)
-			return
+			return fmt.Errorf("Sheet ID %s is already in db", table.SheetID)
 		}
 	}
-	updated, _ := json.Marshal(append(data, table))
-	err := ioutil.WriteFile(db, updated, 0644)
-	if err != nil {
-		log.Fatal(err)
+
+	if err = writeJSON(append(data, table)); err != nil {
+		return err
 	}
+
 	log.Println("Added")
+	return nil
 }

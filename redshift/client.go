@@ -16,7 +16,7 @@ type Client struct {
 
 const chunkSize = 1000
 
-func (r *Client) Connect() {
+func (r *Client) Connect() error {
 	envVars := []string{"host", "port", "user", "dbname"}
 	var connectParams []interface{}
 	for _, v := range envVars {
@@ -26,12 +26,14 @@ func (r *Client) Connect() {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable", connectParams...)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
 	r.DB = db
+	return nil
 }
 
-func (r *Client) InsertBulk(schema, table string, values [][]interface{}) {
+func (r *Client) InsertBulk(schema, table string, values [][]interface{}) error {
 	insertStr := fmt.Sprintf("INSERT INTO %s.%s VALUES ", schema, table)
 
 	maxlen := 0
@@ -68,22 +70,28 @@ func (r *Client) InsertBulk(schema, table string, values [][]interface{}) {
 		stmt := insertStr + strings.Join(valueStrings, ", ")
 
 		log.Printf("Inserting into %s.%s %d %d", schema, table, i, idx)
-		_, err := r.DB.Exec(stmt, valueArgs...)
+		_, err := r.Exec(stmt, valueArgs...)
 		if err != nil {
-			log.Println(err)
+			return err
 		}
 		valueArgs = valueArgs[:0]
 		valueStrings = valueStrings[:0]
 	}
+
+	return nil
 }
 
-func (r *Client) Replace(schema, table string, values [][]interface{}) {
+func (r *Client) Replace(schema, table string, values [][]interface{}) error {
 	stmt := fmt.Sprintf("TRUNCATE TABLE %s.%s", schema, table)
 
 	log.Printf("Truncating %s.%s", schema, table)
-	if _, err := r.DB.Exec(stmt); err != nil {
-		panic(err)
+	if _, err := r.Exec(stmt); err != nil {
+		return err
 	}
 
-	r.InsertBulk(schema, table, values)
+	if err := r.InsertBulk(schema, table, values); err != nil {
+		return err
+	}
+
+	return nil
 }

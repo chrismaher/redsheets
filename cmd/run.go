@@ -5,6 +5,7 @@ import (
 	"github.com/chrismaher/redsheets/json"
 	"github.com/chrismaher/redsheets/redshift"
 	"github.com/spf13/cobra"
+	"log"
 )
 
 // runCmd represents the run command
@@ -13,7 +14,10 @@ var runCmd = &cobra.Command{
 	Short: "Run a GoogleSheets-to-Redshift refresh for a given sheet",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		js := json.Read()
+		js, err := json.Read()
+		if err != nil {
+			log.Panic(err)
+		}
 		var table json.Table
 
 		for _, tab := range js {
@@ -23,7 +27,11 @@ var runCmd = &cobra.Command{
 		}
 
 		service := google.Service{}
-		service.Authorize()
+
+		err = service.Authorize()
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		spreadsheetId := table.SheetID
 		readRange := table.Name
