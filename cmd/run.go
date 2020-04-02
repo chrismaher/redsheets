@@ -30,13 +30,13 @@ var runCmd = &cobra.Command{
 
 		err = service.Authorize()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
-		spreadsheetId := table.SheetID
-		readRange := table.Name
-
-		sheet_contents := service.GetRange(spreadsheetId, readRange)
+		sheet_contents, err := service.GetRange(table.SheetID, table.SheetName)
+		if err != nil {
+			log.Panic(err)
+		}
 
 		db := redshift.Client{}
 		db.Connect()
