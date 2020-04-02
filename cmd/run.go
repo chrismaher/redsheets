@@ -42,7 +42,9 @@ var runCmd = &cobra.Command{
 		db.Connect()
 		defer db.DB.Close()
 
-		db.Replace(table.Schema, table.Name, sheet_contents[1:])
+		if err = db.Replace(table.Schema, table.Name, sheet_contents[1:]); err != nil {
+			log.Panic(err)
+		}
 	},
 }
 
