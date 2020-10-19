@@ -88,7 +88,7 @@ func writeJSON(data []Table) error {
 func Add(table Table) error {
 	data, err := Read()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for _, t := range data {
