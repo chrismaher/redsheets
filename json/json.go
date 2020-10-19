@@ -64,9 +64,7 @@ func List() error {
 		return err
 	}
 
-	for _, table := range tables {
-		log.Printf("%+v", table)
-	}
+	TabPrinter(tables)
 
 	return nil
 }
