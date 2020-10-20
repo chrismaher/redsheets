@@ -1,4 +1,4 @@
-package path
+package homedir
 
 import (
 	"os/user"
