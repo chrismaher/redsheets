@@ -1,13 +1,13 @@
 package cmd
 
 import (
-	"fmt"
+	"log"
+	"strconv"
 
 	"github.com/chrismaher/redsheets/google"
 	"github.com/chrismaher/redsheets/json"
 	"github.com/chrismaher/redsheets/redshift"
 	"github.com/spf13/cobra"
-	"log"
 )
 
 var (
@@ -24,7 +24,7 @@ var initCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := json.Init(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	},
 }
@@ -37,7 +37,7 @@ var addCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		table := json.Table{sheetID, sheetName, schema, name}
 		if err := json.Add(table); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	},
 }
@@ -48,7 +48,12 @@ var deleteCmd = &cobra.Command{
 	Short: "Delete a GoogleSheets-to-Redshift mapping",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("delete called")
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		json.Delete(id)
 	},
 }
 
@@ -59,7 +64,7 @@ var listCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := json.List(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	},
 }
@@ -70,7 +75,7 @@ var updateCmd = &cobra.Command{
 	Short: "Update a GoogleSheets-to-Redshift mapping",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("update called")
+		log.Println("update called")
 	},
 }
 
