@@ -3,10 +3,11 @@ package json
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/chrismaher/redsheets/homedir"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/chrismaher/redsheets/homedir"
 )
 
 type Table struct {
@@ -16,6 +17,8 @@ type Table struct {
 	Name      string `json:"name"`
 }
 
+type Tables map[int]Table
+
 // Init creates the JSON file in which redsheets will persist Table records
 func Init() error {
 	db, err := homedir.FullPath(".redsheets.json")
@@ -24,7 +27,7 @@ func Init() error {
 	}
 
 	if _, err := os.Stat(db); os.IsNotExist(err) {
-		if err := ioutil.WriteFile(db, []byte("[]"), 0644); err != nil {
+		if err := ioutil.WriteFile(db, []byte("{}"), 0644); err != nil {
 			return err
 		}
 		log.Printf("%s created", db)
@@ -34,8 +37,8 @@ func Init() error {
 	return fmt.Errorf("%s already exists", db)
 }
 
-func parseTables(b []byte) ([]Table, error) {
-	var data []Table
+func parseTables(b []byte) (Tables, error) {
+	var data Tables
 	if err := json.Unmarshal(b, &data); err != nil {
 		return nil, err
 	}
@@ -44,7 +47,7 @@ func parseTables(b []byte) ([]Table, error) {
 }
 
 // Read the JSON file into a slice of Table
-func Read() ([]Table, error) {
+func Read() (Tables, error) {
 	db, err := homedir.FullPath(".redsheets.json")
 	if err != nil {
 		return nil, err
@@ -69,7 +72,7 @@ func List() error {
 	return nil
 }
 
-func writeJSON(data []Table) error {
+func writeJSON(data Tables) error {
 	db, err := homedir.FullPath(".redsheets.json")
 	if err != nil {
 		return err
@@ -89,16 +92,38 @@ func Add(table Table) error {
 		return err
 	}
 
-	for _, t := range data {
-		if table.SheetID == t.SheetID {
+	for _, v := range data {
+		if table.SheetID == v.SheetID {
 			return fmt.Errorf("Sheet ID %s is already in db", table.SheetID)
 		}
 	}
 
-	if err = writeJSON(append(data, table)); err != nil {
+	data[len(data)] = table
+	if err = writeJSON(data); err != nil {
 		return err
 	}
 
-	log.Println("Added")
+	return nil
+}
+
+func Delete(index int) error {
+	data, err := Read()
+	if err != nil {
+		return err
+	}
+
+	delete(data, index)
+
+	// shift elements at higher indices down one index
+	for i := index + 1; i < len(data)+1; i++ {
+		data[i-1] = data[i]
+	}
+
+	delete(data, len(data)-1)
+
+	if err = writeJSON(data); err != nil {
+		return err
+	}
+
 	return nil
 }
