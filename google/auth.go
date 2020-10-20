@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/chrismaher/redsheets/path"
+	"github.com/chrismaher/redsheets/homedir"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -71,7 +71,7 @@ func getClient(config *oauth2.Config) *http.Client {
 }
 
 func (s *Service) Authorize() error {
-	filePath, err := path.FullPath("client_id.json")
+	filePath, err := homedir.FullPath("client_id.json")
 	if err != nil {
 		return err
 	}

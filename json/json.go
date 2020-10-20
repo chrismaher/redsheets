@@ -3,7 +3,7 @@ package json
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/chrismaher/redsheets/path"
+	"github.com/chrismaher/redsheets/homedir"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,7 +18,7 @@ type Table struct {
 
 // Init creates the JSON file in which redsheets will persist Table records
 func Init() error {
-	db, err := path.FullPath(".redsheets.json")
+	db, err := homedir.FullPath(".redsheets.json")
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func parseTables(b []byte) ([]Table, error) {
 
 // Read the JSON file into a slice of Table
 func Read() ([]Table, error) {
-	db, err := path.FullPath(".redsheets.json")
+	db, err := homedir.FullPath(".redsheets.json")
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func List() error {
 }
 
 func writeJSON(data []Table) error {
-	db, err := path.FullPath(".redsheets.json")
+	db, err := homedir.FullPath(".redsheets.json")
 	if err != nil {
 		return err
 	}
