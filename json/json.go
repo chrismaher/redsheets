@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/chrismaher/redsheets/homedir"
@@ -30,7 +29,7 @@ func Init() error {
 		if err := ioutil.WriteFile(db, []byte("{}"), 0644); err != nil {
 			return err
 		}
-		log.Printf("%s created", db)
+		fmt.Printf("%s created\n", db)
 		return nil
 	}
 

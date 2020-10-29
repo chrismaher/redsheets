@@ -3,8 +3,9 @@ package redshift
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
 	"os"
+
+	_ "github.com/lib/pq"
 )
 
 type Client struct {
@@ -12,9 +13,8 @@ type Client struct {
 }
 
 func (r *Client) Connect() error {
-	envVars := []string{"host", "port", "user", "dbname"}
 	var connectParams []interface{}
-	for _, v := range envVars {
+	for _, v := range []string{"host", "port", "user", "dbname"} {
 		connectParams = append(connectParams, os.Getenv(v))
 	}
 
