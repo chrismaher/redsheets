@@ -36,6 +36,7 @@ func Init() error {
 	return fmt.Errorf("%s already exists", db)
 }
 
+// Parse byte slice into a map[int]Table
 func parseTables(b []byte) (Tables, error) {
 	var data Tables
 	if err := json.Unmarshal(b, &data); err != nil {
@@ -60,6 +61,7 @@ func Read() (Tables, error) {
 	return parseTables(b)
 }
 
+// Tab-print slice of Table
 func List() error {
 	tables, err := Read()
 	if err != nil {
@@ -71,6 +73,7 @@ func List() error {
 	return nil
 }
 
+// Serialize a map[int]Table as to JSON file
 func writeJSON(data Tables) error {
 	db, err := homedir.FullPath(".redsheets.json")
 	if err != nil {
@@ -85,26 +88,23 @@ func writeJSON(data Tables) error {
 	return ioutil.WriteFile(db, tableJSON, 0644)
 }
 
-func Add(table Table) error {
+// Add a Table to an existing Tables map
+func Add(table Table) (int, error) {
 	data, err := Read()
 	if err != nil {
-		return err
+		return -1, err
 	}
 
-	for _, v := range data {
-		if table.SheetID == v.SheetID {
-			return fmt.Errorf("Sheet ID %s is already in db", table.SheetID)
-		}
-	}
-
-	data[len(data)] = table
+	key := len(data)
+	data[key] = table
 	if err = writeJSON(data); err != nil {
-		return err
+		return -1, err
 	}
 
-	return nil
+	return key, nil
 }
 
+// Get a Table by its key from a Tables map
 func Get(key int) (Table, error) {
 	tables, err := Read()
 	if err != nil {
@@ -113,23 +113,22 @@ func Get(key int) (Table, error) {
 
 	table, ok := tables[key]
 	if !ok {
-		return Table{}, fmt.Errorf("Key %d does not exist", key)
+		return Table{}, fmt.Errorf("Table %d does not exist", key)
 	}
 
 	return table, nil
 }
 
-func Delete(index int) error {
+// Delete a Table by its key from a Tables map
+func Delete(key int) error {
 	data, err := Read()
 	if err != nil {
 		return err
 	}
 
-	delete(data, index)
-
-	// shift elements at higher indices down one index
-	for i := index + 1; i < len(data)+1; i++ {
-		data[i-1] = data[i]
+	// shift elements at higher indices down one key
+	for i := key; i < len(data); i++ {
+		data[i] = data[i+1]
 	}
 
 	delete(data, len(data)-1)

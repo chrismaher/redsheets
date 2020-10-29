@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 
@@ -36,9 +37,11 @@ var addCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		table := json.Table{id, sheet, schema, name}
-		if err := json.Add(table); err != nil {
+		key, err := json.Add(table)
+		if err != nil {
 			log.Println(err)
 		}
+		fmt.Printf("Created table %d\n", key)
 	},
 }
 
@@ -48,12 +51,15 @@ var deleteCmd = &cobra.Command{
 	Short: "Delete a GoogleSheets-to-Redshift mapping",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		id, err := strconv.Atoi(args[0])
-		if err != nil {
-			log.Println(err)
-			return
+		for _, v := range args {
+			id, err := strconv.Atoi(v)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			json.Delete(id)
+			fmt.Printf("Deleted table %d\n", id)
 		}
-		json.Delete(id)
 	},
 }
 
@@ -85,33 +91,35 @@ var runCmd = &cobra.Command{
 	Short: "Run a GoogleSheets-to-Redshift refresh for a given sheet",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := strconv.Atoi(args[0])
-		if err != nil {
-			log.Panic(err)
-		}
+		for _, v := range args {
+			key, err := strconv.Atoi(v)
+			if err != nil {
+				log.Panic(err)
+			}
 
-		table, err := json.Get(key)
-		if err != nil {
-			log.Panic(err)
-		}
-		service := google.Service{}
+			table, err := json.Get(key)
+			if err != nil {
+				log.Panic(err)
+			}
+			service := google.Service{}
 
-		err = service.Authorize()
-		if err != nil {
-			log.Panic(err)
-		}
+			err = service.Authorize()
+			if err != nil {
+				log.Panic(err)
+			}
 
-		sheet_contents, err := service.GetRange(table.SheetID, table.SheetName)
-		if err != nil {
-			log.Panic(err)
-		}
+			sheet_contents, err := service.GetRange(table.SheetID, table.SheetName)
+			if err != nil {
+				log.Panic(err)
+			}
 
-		db := redshift.Client{}
-		db.Connect()
-		defer db.DB.Close()
+			db := redshift.Client{}
+			db.Connect()
+			defer db.DB.Close()
 
-		if err = db.Replace(table.Schema, table.Name, sheet_contents[1:]); err != nil {
-			log.Panic(err)
+			if err = db.Replace(table.Schema, table.Name, sheet_contents[1:]); err != nil {
+				log.Panic(err)
+			}
 		}
 	},
 }
