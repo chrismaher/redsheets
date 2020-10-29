@@ -2,7 +2,6 @@ package redshift
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -12,7 +11,7 @@ const chunkSize = 1000
 func (r *Client) Truncate(schema, table string) error {
 	stmt := fmt.Sprintf("TRUNCATE TABLE %s.%s", schema, table)
 
-	log.Printf("Truncating %s.%s", schema, table)
+	fmt.Printf("Truncating %s.%s\n", schema, table)
 	if _, err := r.Exec(stmt); err != nil {
 		return err
 	}
@@ -62,7 +61,6 @@ func (r *Client) InsertBulk(schema, table string, values [][]interface{}) error 
 	var upper int
 
 	for i := 0; i < len(values); i += chunkSize {
-		fmt.Println(i, len(values), i < len(values))
 		if length < i+chunkSize {
 			upper = length
 		} else {
@@ -70,7 +68,7 @@ func (r *Client) InsertBulk(schema, table string, values [][]interface{}) error 
 		}
 
 		vals := values[i:upper]
-		log.Printf("Inserting into %s.%s %d", schema, table, i)
+		fmt.Printf("Inserting into %s.%s at row %d\n", schema, table, i)
 
 		if err := r.Insert(vals, insertStr, maxlen, &valueStrings, &valueArgs); err != nil {
 			return err
