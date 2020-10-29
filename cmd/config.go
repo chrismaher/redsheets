@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	schema    string
-	name      string
-	sheetID   string
-	sheetName string
+	schema string
+	name   string
+	id     string
+	sheet  string
 )
 
 // initCmd represents the init command
@@ -35,7 +35,7 @@ var addCmd = &cobra.Command{
 	Short: "Add a GoogleSheets-to-Redshift mapping",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		table := json.Table{sheetID, sheetName, schema, name}
+		table := json.Table{id, sheet, schema, name}
 		if err := json.Add(table); err != nil {
 			log.Println(err)
 		}
@@ -85,18 +85,15 @@ var runCmd = &cobra.Command{
 	Short: "Run a GoogleSheets-to-Redshift refresh for a given sheet",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		js, err := json.Read()
+		key, err := strconv.Atoi(args[0])
 		if err != nil {
 			log.Panic(err)
 		}
-		var table json.Table
 
-		for _, tab := range js {
-			if tab.Schema == schema && tab.Name == name {
-				table = tab
-			}
+		table, err := json.Get(key)
+		if err != nil {
+			log.Panic(err)
 		}
-
 		service := google.Service{}
 
 		err = service.Authorize()
@@ -120,19 +117,15 @@ var runCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(runCmd)
-
-	runCmd.Flags().StringVar(&schema, "schema", "", "The target tables's schema (required)")
-	runCmd.Flags().StringVar(&name, "table", "", "The target tables's name (required)")
-
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(deleteCmd)
 	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(updateCmd)
 
-	addCmd.Flags().StringVar(&sheetID, "sheet_id", "", "AWS region (required)")
-	addCmd.Flags().StringVar(&sheetName, "sheet_name", "", "AWS region (required)")
+	addCmd.Flags().StringVar(&id, "sheet_id", "", "AWS region (required)")
+	addCmd.Flags().StringVar(&sheet, "sheet_name", "", "AWS region (required)")
 	addCmd.Flags().StringVar(&schema, "schema", "", "AWS region (required)")
 	addCmd.Flags().StringVar(&name, "table", "", "AWS region (required)")
 }

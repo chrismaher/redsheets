@@ -106,6 +106,20 @@ func Add(table Table) error {
 	return nil
 }
 
+func Get(key int) (Table, error) {
+	tables, err := Read()
+	if err != nil {
+		return Table{}, err
+	}
+
+	table, ok := tables[key]
+	if !ok {
+		return Table{}, fmt.Errorf("Key %d does not exist", key)
+	}
+
+	return table, nil
+}
+
 func Delete(index int) error {
 	data, err := Read()
 	if err != nil {
