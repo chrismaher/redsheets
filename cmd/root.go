@@ -2,20 +2,33 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
 
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/chrismaher/redsheets/homedir"
+	"github.com/chrismaher/redsheets/json"
 )
 
-var cfgFile string
+type connection struct {
+	Host string
+	Port string
+	User string
+	Name string
+}
+
+var (
+	cfgFile   string
+	dataStore string
+	conn      connection
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "redsheets",
-	Short: "A brief description of your application",
-	Long:  `A longer description that spans multiple lines and likely contains to quickly create a Cobra application.`,
+	Short: "redsheets provides an interfact for managing Google Sheets -> Redshift mappings",
+	Long:  `A CLI for managing mappings between Google Sheets and Redshift tables. Complete documentation is available at https://github.com/chrismaher/redsheets.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -29,8 +42,10 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize()
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.redsheets.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.redsheets/config.toml)")
+	rootCmd.PersistentFlags().StringVar(&dataStore, "datastore", "", "")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -40,7 +55,7 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
-		home, err := homedir.Dir()
+		home, err := homedir.FullPath(dataStore)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -48,7 +63,8 @@ func initConfig() {
 
 		// Search config in home directory with name ".redsheets" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".redsheets")
+		viper.SetConfigName("config.toml")
+		viper.SetConfigType("toml")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -57,4 +73,12 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+
+	if err := viper.Unmarshal(&conn); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	data = json.Data{Path: "/Users/cmaher/.redsheets/data/redsheets.json"}
+	data.Read()
 }
