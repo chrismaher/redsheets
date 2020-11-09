@@ -9,19 +9,13 @@ import (
 
 	"github.com/chrismaher/redsheets/homedir"
 	"github.com/chrismaher/redsheets/json"
+	"github.com/chrismaher/redsheets/redshift"
 )
-
-type connection struct {
-	Host string
-	Port string
-	User string
-	Name string
-}
 
 var (
 	cfgFile   string
 	dataStore string
-	conn      connection
+	conn      redshift.Connection
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -55,14 +49,14 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
-		home, err := homedir.FullPath(dataStore)
+		path, err := homedir.FullPath(".redsheets")
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
 		// Search config in home directory with name ".redsheets" (without extension).
-		viper.AddConfigPath(home)
+		viper.AddConfigPath(path)
 		viper.SetConfigName("config.toml")
 		viper.SetConfigType("toml")
 	}
@@ -70,11 +64,12 @@ func initConfig() {
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	if err := viper.ReadInConfig(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	if err := viper.Unmarshal(&conn); err != nil {
+	if err := viper.UnmarshalKey("database", &conn); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
