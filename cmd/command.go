@@ -16,19 +16,8 @@ var (
 	name   string
 	id     string
 	sheet  string
+	data   json.Data
 )
-
-// initCmd represents the init command
-var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initialize a JSON datastore of GoogleSheets-to-Redshift mappings",
-	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := json.Init(); err != nil {
-			log.Println(err)
-		}
-	},
-}
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
@@ -37,7 +26,7 @@ var addCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		table := json.Table{id, sheet, schema, name}
-		key, err := json.Add(table)
+		key, err := data.Add(table)
 		if err != nil {
 			log.Println(err)
 		}
@@ -57,7 +46,7 @@ var deleteCmd = &cobra.Command{
 				log.Println(err)
 				return
 			}
-			json.Delete(id)
+			data.Delete(id)
 			fmt.Printf("Deleted table %d\n", id)
 		}
 	},
@@ -69,9 +58,7 @@ var listCmd = &cobra.Command{
 	Short: "List all mappings",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := json.List(); err != nil {
-			log.Println(err)
-		}
+		data.List()
 	},
 }
 
@@ -97,7 +84,7 @@ var runCmd = &cobra.Command{
 				log.Panic(err)
 			}
 
-			table, err := json.Get(key)
+			table, err := data.Get(key)
 			if err != nil {
 				log.Panic(err)
 			}
@@ -113,7 +100,7 @@ var runCmd = &cobra.Command{
 				log.Panic(err)
 			}
 
-			db := redshift.Client{}
+			db := redshift.Client{Connection: &conn}
 			db.Connect()
 			defer db.DB.Close()
 
@@ -125,7 +112,6 @@ var runCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(deleteCmd)
 	rootCmd.AddCommand(listCmd)
