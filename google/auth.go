@@ -14,75 +14,74 @@ import (
 	"google.golang.org/api/sheets/v4"
 )
 
-type Service struct {
-	Path   string
-	Client *sheets.Service
+type Client struct {
+	File string
+	*sheets.Service
+	*oauth2.Token
 }
 
-func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
+func (c *Client) getToken(config *oauth2.Config) {
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser then type the "+
 		"authorization code: \n%v\n", authURL)
 
+	var err error
 	var authCode string
-	if _, err := fmt.Scan(&authCode); err != nil {
+
+	if _, err = fmt.Scan(&authCode); err != nil {
 		log.Fatalf("Unable to read authorization code: %v", err)
 	}
 
-	token, err := config.Exchange(context.TODO(), authCode)
-	if err != nil {
+	if c.Token, err = config.Exchange(context.TODO(), authCode); err != nil {
 		log.Fatalf("Unable to retrieve token from web: %v", err)
 	}
-	return token
 }
 
-// tokenFromFile retrieves a token from a local file
-func tokenFromFile(file string) (*oauth2.Token, error) {
-	f, err := os.Open(file)
+func (c *Client) readToken() error {
+	f, err := os.Open(c.File)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer f.Close()
-	tok := &oauth2.Token{}
-	err = json.NewDecoder(f).Decode(tok)
-	return tok, err
+
+	c.Token = new(oauth2.Token)
+	if err := json.NewDecoder(f).Decode(c.Token); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func saveToken(path string, token *oauth2.Token) {
-	fmt.Printf("Saving credential file to: %s\n", path)
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+func (c *Client) saveToken() {
+	fmt.Printf("Saving credential file to: %s\n", c.File)
+	f, err := os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		log.Fatalf("Unable to cache oauth token: %v", err)
 	}
 	defer f.Close()
-	json.NewEncoder(f).Encode(token)
+	json.NewEncoder(f).Encode(c.Token)
 }
 
-// Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config) *http.Client {
-	// The file token.json stores the user's access and refresh tokens
-	tokenFile := "token.json"
-	token, err := tokenFromFile(tokenFile)
-	if err != nil {
-		token = getTokenFromWeb(config)
-		saveToken(tokenFile, token)
+func (c *Client) getClient(config *oauth2.Config) *http.Client {
+	if err := c.readToken(); err != nil {
+		c.getToken(config)
+		c.saveToken()
 	}
-	return config.Client(context.Background(), token)
+	return config.Client(context.Background(), c.Token)
 }
 
-func (s *Service) Authorize() error {
-	b, err := ioutil.ReadFile(s.Path)
+func (c *Client) Authorize() error {
+	buffer, err := ioutil.ReadFile(c.File)
 	if err != nil {
 		return err
 	}
 
-	config, err := google.ConfigFromJSON(b, "https://www.googleapis.com/auth/spreadsheets.readonly")
+	config, err := google.ConfigFromJSON(buffer, "https://www.googleapis.com/auth/spreadsheets.readonly")
 	if err != nil {
 		return err
 	}
-	client := getClient(config)
 
-	if s.Client, err = sheets.New(client); err != nil {
+	if c.Service, err = sheets.New(c.getClient(config)); err != nil {
 		return err
 	}
 

@@ -98,7 +98,7 @@ var runCmd = &cobra.Command{
 				log.Panic(err)
 			}
 
-			db := redshift.Client{Connection: &conn}
+			db := redshift.Client{Connection: &connect}
 			db.Connect()
 			defer db.DB.Close()
 

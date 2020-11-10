@@ -16,7 +16,7 @@ import (
 var (
 	cfgFile  string
 	dataFile string
-	service  google.Service
+	service  google.Client
 	connect  redshift.Connection
 )
 
@@ -84,5 +84,5 @@ func initConfig() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	service = google.Service{Path: path}
+	service = google.Client{File: path}
 }
