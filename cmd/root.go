@@ -74,6 +74,6 @@ func initConfig() {
 		os.Exit(1)
 	}
 
-	data = json.Data{Path: "/Users/cmaher/.redsheets/data/redsheets.json"}
-	data.Read()
+	datastore = json.DataStore{Path: "/Users/cmaher/.redsheets/data/redsheets.json"}
+	datastore.Read()
 }

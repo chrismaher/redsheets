@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	schema string
-	name   string
-	id     string
-	sheet  string
-	data   json.Data
+	schema    string
+	name      string
+	id        string
+	sheet     string
+	datastore json.DataStore
 )
 
 // addCmd represents the add command
@@ -26,7 +26,7 @@ var addCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		table := json.Table{id, sheet, schema, name}
-		key, err := data.Add(table)
+		key, err := datastore.Add(table)
 		if err != nil {
 			log.Println(err)
 		}
@@ -46,7 +46,7 @@ var deleteCmd = &cobra.Command{
 				log.Println(err)
 				return
 			}
-			data.Delete(id)
+			datastore.Delete(id)
 			fmt.Printf("Deleted table %d\n", id)
 		}
 	},
@@ -58,7 +58,7 @@ var listCmd = &cobra.Command{
 	Short: "List all mappings",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		data.List()
+		datastore.Print()
 	},
 }
 
@@ -84,7 +84,7 @@ var runCmd = &cobra.Command{
 				log.Panic(err)
 			}
 
-			table, err := data.Get(key)
+			table, err := datastore.Get(key)
 			if err != nil {
 				log.Panic(err)
 			}
