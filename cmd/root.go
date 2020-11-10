@@ -7,15 +7,17 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/chrismaher/redsheets/google"
 	"github.com/chrismaher/redsheets/homedir"
 	"github.com/chrismaher/redsheets/json"
 	"github.com/chrismaher/redsheets/redshift"
 )
 
 var (
-	cfgFile   string
-	dataStore string
-	conn      redshift.Connection
+	cfgFile  string
+	dataFile string
+	service  google.Service
+	connect  redshift.Connection
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -39,7 +41,7 @@ func init() {
 	cobra.OnInitialize()
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.redsheets/config.toml)")
-	rootCmd.PersistentFlags().StringVar(&dataStore, "datastore", "", "")
+	rootCmd.PersistentFlags().StringVar(&dataFile, "datastore", "", "")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -69,11 +71,18 @@ func initConfig() {
 		os.Exit(1)
 	}
 
-	if err := viper.UnmarshalKey("database", &conn); err != nil {
+	if err := viper.UnmarshalKey("database", &connect); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	datastore = json.DataStore{Path: "/Users/cmaher/.redsheets/data/redsheets.json"}
 	datastore.Read()
+
+	path, err := homedir.FullPath(viper.GetString("client.secret"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	service = google.Service{Path: path}
 }

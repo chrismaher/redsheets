@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/chrismaher/redsheets/homedir"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -16,6 +15,7 @@ import (
 )
 
 type Service struct {
+	Path   string
 	Client *sheets.Service
 }
 
@@ -71,12 +71,7 @@ func getClient(config *oauth2.Config) *http.Client {
 }
 
 func (s *Service) Authorize() error {
-	filePath, err := homedir.FullPath("client_id.json")
-	if err != nil {
-		return err
-	}
-
-	b, err := ioutil.ReadFile(filePath)
+	b, err := ioutil.ReadFile(s.Path)
 	if err != nil {
 		return err
 	}
@@ -87,11 +82,9 @@ func (s *Service) Authorize() error {
 	}
 	client := getClient(config)
 
-	srv, err := sheets.New(client)
-	if err != nil {
+	if s.Client, err = sheets.New(client); err != nil {
 		return err
 	}
 
-	s.Client = srv
 	return nil
 }
