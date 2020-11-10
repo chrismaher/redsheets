@@ -5,7 +5,6 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/chrismaher/redsheets/google"
 	"github.com/chrismaher/redsheets/json"
 	"github.com/chrismaher/redsheets/redshift"
 	"github.com/spf13/cobra"
@@ -88,7 +87,6 @@ var runCmd = &cobra.Command{
 			if err != nil {
 				log.Panic(err)
 			}
-			service := google.Service{}
 
 			err = service.Authorize()
 			if err != nil {
@@ -100,7 +98,7 @@ var runCmd = &cobra.Command{
 				log.Panic(err)
 			}
 
-			db := redshift.Client{Connection: &conn}
+			db := redshift.Client{Connection: &connect}
 			db.Connect()
 			defer db.DB.Close()
 
