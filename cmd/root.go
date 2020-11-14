@@ -84,5 +84,5 @@ func initConfig() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	service = google.Client{File: path}
+	service = google.Client{SecretFile: path, TokenFile: "/Users/cmaher/.redsheets/google/token.json"}
 }

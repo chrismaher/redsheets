@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 
@@ -15,63 +14,66 @@ import (
 )
 
 type Client struct {
-	File string
-	*sheets.Service
+	SecretFile string
+	TokenFile  string
 	*oauth2.Token
+	*sheets.Service
 }
 
-func (c *Client) getToken(config *oauth2.Config) {
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Go to the following link in your browser then type the "+
-		"authorization code: \n%v\n", authURL)
+func (c *Client) getToken(config *oauth2.Config) error {
+	url := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	fmt.Printf("Open the following link in your browser and then type the authorization code: \n%v\n", url)
 
 	var err error
 	var authCode string
 
 	if _, err = fmt.Scan(&authCode); err != nil {
-		log.Fatalf("Unable to read authorization code: %v", err)
+		return fmt.Errorf("Unable to read authorization code: %v", err)
 	}
 
 	if c.Token, err = config.Exchange(context.TODO(), authCode); err != nil {
-		log.Fatalf("Unable to retrieve token from web: %v", err)
-	}
-}
-
-func (c *Client) readToken() error {
-	f, err := os.Open(c.File)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	c.Token = new(oauth2.Token)
-	if err := json.NewDecoder(f).Decode(c.Token); err != nil {
-		return err
+		return fmt.Errorf("Unable to retrieve token from web: %v", err)
 	}
 
 	return nil
 }
 
-func (c *Client) saveToken() {
-	fmt.Printf("Saving credential file to: %s\n", c.File)
-	f, err := os.OpenFile(c.File, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+func (c *Client) readToken() error {
+	f, err := os.Open(c.TokenFile)
 	if err != nil {
-		log.Fatalf("Unable to cache oauth token: %v", err)
+		return err
+	}
+	defer f.Close()
+
+	return json.NewDecoder(f).Decode(&c.Token)
+}
+
+func (c *Client) saveToken() error {
+	fmt.Printf("Saving credential file to: %s\n", c.TokenFile)
+
+	f, err := os.OpenFile(c.TokenFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return fmt.Errorf("Unable to cache oauth token: %v", err)
 	}
 	defer f.Close()
 	json.NewEncoder(f).Encode(c.Token)
+
+	return nil
 }
 
-func (c *Client) getClient(config *oauth2.Config) *http.Client {
+func (c *Client) getClient(config *oauth2.Config) (*http.Client, error) {
 	if err := c.readToken(); err != nil {
-		c.getToken(config)
+		if err := c.getToken(config); err != nil {
+			return nil, err
+		}
 		c.saveToken()
 	}
-	return config.Client(context.Background(), c.Token)
+
+	return config.Client(context.Background(), c.Token), nil
 }
 
 func (c *Client) Authorize() error {
-	buffer, err := ioutil.ReadFile(c.File)
+	buffer, err := ioutil.ReadFile(c.SecretFile)
 	if err != nil {
 		return err
 	}
@@ -81,7 +83,12 @@ func (c *Client) Authorize() error {
 		return err
 	}
 
-	if c.Service, err = sheets.New(c.getClient(config)); err != nil {
+	client, err := c.getClient(config)
+	if err != nil {
+		return err
+	}
+
+	if c.Service, err = sheets.New(client); err != nil {
 		return err
 	}
 
