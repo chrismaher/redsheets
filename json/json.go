@@ -9,24 +9,31 @@ import (
 )
 
 type Table struct {
-	SheetID   string `json:"sheet_id"`
-	SheetName string `json:"sheet_name"`
-	Schema    string `json:"schema"`
-	Name      string `json:"name"`
+	Schema string `json:"schema"`
+	Name   string `json:"name"`
 }
 
-type TableMap map[int]Table
+type Map struct {
+	SheetID   string `json:"sheet_id"`
+	SheetName string `json:"sheet_name"`
+	Table
+}
 
 type DataStore struct {
-	Path   string
-	Tables TableMap
+	Path string
+	Maps []Map
+}
+
+// NewMap takes four string values and returns a Map
+func NewMap(id, sheet, schema, name string) Map {
+	return Map{id, sheet, Table{schema, name}}
 }
 
 // Read the JSON file into a slice of Table
 func (d *DataStore) Read() error {
 	// test if datastore does not exist yet
 	if _, err := os.Stat(d.Path); os.IsNotExist(err) {
-		if err := ioutil.WriteFile(d.Path, []byte("{}"), 0644); err != nil {
+		if err := ioutil.WriteFile(d.Path, []byte("[]"), 0644); err != nil {
 			return err
 		}
 		fmt.Printf("%s created\n", d.Path)
@@ -36,7 +43,7 @@ func (d *DataStore) Read() error {
 			return err
 		}
 
-		if err := json.Unmarshal(b, &d.Tables); err != nil {
+		if err := json.Unmarshal(b, &d.Maps); err != nil {
 			return err
 		}
 	}
@@ -52,18 +59,18 @@ func (d *DataStore) Print() {
 	fmt.Fprintf(tw, str, "ID", "Sheet ID", "Sheet Name", "Schema", "Name")
 	fmt.Fprintf(tw, str, "--", "--------", "----------", "------", "----")
 
-	var v Table
-	for i := 0; i < len(d.Tables); i++ {
-		v = d.Tables[i]
-		fmt.Fprintf(tw, str, i, v.SheetID, v.SheetName, v.Schema, v.Name)
+	var m Map
+	for i := 0; i < len(d.Maps); i++ {
+		m = d.Maps[i]
+		fmt.Fprintf(tw, str, i+1, m.SheetID, m.SheetName, m.Schema, m.Name)
 	}
 
 	tw.Flush()
 }
 
-// Serialize a TableMap to a JSON file
+// Serialize a []Map to a JSON file
 func (d *DataStore) Write() error {
-	tableJSON, err := json.Marshal(d.Tables)
+	tableJSON, err := json.Marshal(d.Maps)
 	if err != nil {
 		return err
 	}
@@ -71,39 +78,27 @@ func (d *DataStore) Write() error {
 	return ioutil.WriteFile(d.Path, tableJSON, 0644)
 }
 
-// Add a Table to an existing Tables map
-func (d *DataStore) Add(table Table) (int, error) {
-	key := len(d.Tables)
-	d.Tables[key] = table
-	if err := d.Write(); err != nil {
-		return -1, err
-	}
-
-	return key, nil
+// Add a Table to DataStore.Maps
+func (d *DataStore) Add(m Map) (int, error) {
+	d.Maps = append(d.Maps, m)
+	return len(d.Maps), d.Write()
 }
 
-// Get a Table by its key from a Tables map
-func (d *DataStore) Get(key int) (Table, error) {
-	table, ok := d.Tables[key]
-	if !ok {
-		return Table{}, fmt.Errorf("Table %d does not exist", key)
+// Get a Table by its key from a Maps map
+func (d *DataStore) Get(key int) (Map, error) {
+	if key < 1 || key > len(d.Maps) {
+		return Map{}, fmt.Errorf("Table %d does not exist", key)
 	}
 
-	return table, nil
+	return d.Maps[key-1], nil
 }
 
-// Delete a Table by its key from a Tables map
+// Delete a Table by its key from a Maps map
 func (d *DataStore) Delete(key int) error {
-	// shift elements at higher indices down one key
-	for i := key; i < len(d.Tables); i++ {
-		d.Tables[i] = d.Tables[i+1]
+	if key < 1 || key > len(d.Maps) {
+		return fmt.Errorf("Table %d does not exist", key)
 	}
 
-	delete(d.Tables, len(d.Tables)-1)
-
-	if err := d.Write(); err != nil {
-		return err
-	}
-
-	return nil
+	d.Maps = append(d.Maps[:key-1], d.Maps[key:]...)
+	return d.Write()
 }

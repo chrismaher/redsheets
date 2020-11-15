@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"log"
+	"os"
 	"strconv"
 
 	"github.com/chrismaher/redsheets/json"
@@ -24,12 +24,12 @@ var addCmd = &cobra.Command{
 	Short: "Add a GoogleSheets-to-Redshift mapping",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		table := json.Table{id, sheet, schema, name}
-		key, err := datastore.Add(table)
+		table := json.NewMap(id, sheet, schema, name)
+		ln, err := datastore.Add(table)
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 		}
-		fmt.Printf("Created table %d\n", key)
+		fmt.Printf("Added map %d\n", ln)
 	},
 }
 
@@ -42,11 +42,17 @@ var deleteCmd = &cobra.Command{
 		for _, v := range args {
 			id, err := strconv.Atoi(v)
 			if err != nil {
-				log.Println(err)
+				fmt.Println(err)
 				return
 			}
-			datastore.Delete(id)
-			fmt.Printf("Deleted table %d\n", id)
+
+			err = datastore.Delete(id)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			fmt.Printf("Deleted map %d\n", id)
 		}
 	},
 }
@@ -67,7 +73,7 @@ var updateCmd = &cobra.Command{
 	Short: "Update a GoogleSheets-to-Redshift mapping",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Println("update called")
+		fmt.Println("update called")
 	},
 }
 
@@ -80,22 +86,26 @@ var runCmd = &cobra.Command{
 		for _, v := range args {
 			key, err := strconv.Atoi(v)
 			if err != nil {
-				log.Panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 
 			table, err := datastore.Get(key)
 			if err != nil {
-				log.Panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 
 			err = service.Authorize()
 			if err != nil {
-				log.Panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 
 			sheet_contents, err := service.GetRange(table.SheetID, table.SheetName)
 			if err != nil {
-				log.Panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 
 			db := redshift.Client{Connection: &connect}
@@ -103,7 +113,8 @@ var runCmd = &cobra.Command{
 			defer db.DB.Close()
 
 			if err = db.Replace(table.Schema, table.Name, sheet_contents[1:]); err != nil {
-				log.Panic(err)
+				fmt.Println(err)
+				os.Exit(1)
 			}
 		}
 	},
