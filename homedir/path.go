@@ -15,13 +15,18 @@ func Base() (string, error) {
 	return usr.HomeDir, nil
 }
 
-// FullPath returns a fully qualified filepath
-// based on the user's home directory
-func FullPath(filename string) (string, error) {
+// FullPath joins variadic path inputs and returns
+// a fully qualified filepath based on the user's home directory
+func FullPath(paths ...string) (string, error) {
 	dir, err := Base()
 	if err != nil {
 		return "", err
 	}
 
-	return path.Join(dir, filename), nil
+	var fullPath = dir
+	for _, p := range paths {
+		fullPath = path.Join(fullPath, p)
+	}
+
+	return fullPath, nil
 }
