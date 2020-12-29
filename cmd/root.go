@@ -15,6 +15,7 @@ import (
 
 var (
 	configFile string
+	dataFile   string
 	secretFile string
 	tokenFile  string
 	service    google.Client
@@ -48,8 +49,8 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set
 func initConfig() {
-	// Find application directory; need to test if it exists?
-	path, err := homedir.FullPath(".redsheets")
+	// Find application directory; create if it doesn't exist?
+	projectDir, err := homedir.AbsPath(".redsheets")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -60,7 +61,7 @@ func initConfig() {
 		viper.SetConfigFile(configFile)
 	} else {
 		// Search for config in ~/.redsheets directory
-		viper.AddConfigPath(path)
+		viper.AddConfigPath(projectDir)
 		viper.SetConfigName("config.toml")
 		viper.SetConfigType("toml")
 	}
@@ -74,19 +75,23 @@ func initConfig() {
 	}
 
 	if err := viper.UnmarshalKey("database", &connect); err != nil {
+		// need to test this
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	storePath, err := homedir.FullPath(".redsheets/data/redsheets.json")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	if dataFile == "" {
+		dataFile, err = homedir.AbsPath(projectDir, "data.json")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
-	viper.SetDefault("datastore", storePath)
+	datastore = json.DataStore{Path: dataFile}
+	datastore.Read()
 
 	if secretFile == "" {
-		secretFile, err = homedir.FullPath(".redsheets", viper.GetString("client.secret"))
+		secretFile, err = homedir.AbsPath(projectDir, viper.GetString("client.secret"))
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -94,15 +99,16 @@ func initConfig() {
 	}
 
 	if tokenFile == "" {
-		tokenFile, err = homedir.FullPath(".redsheets", viper.GetString("client.token"))
+		tokenFile, err = homedir.AbsPath(projectDir, viper.GetString("client.token"))
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	}
 
-	datastore = json.DataStore{Path: viper.GetString("datastore")}
-	datastore.Read()
-
-	service = google.Client{SecretFile: secretFile, TokenFile: tokenFile}
+	service, err = google.New(secretFile, tokenFile)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }

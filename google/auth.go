@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/chrismaher/redsheets/homedir"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -93,4 +94,17 @@ func (c *Client) Authorize() error {
 	}
 
 	return nil
+}
+
+func New(secretFile, tokenFile string) (Client, error) {
+	if !homedir.Exists(secretFile) {
+		return Client{}, fmt.Errorf("Secret file %s does not exist", secretFile)
+	}
+
+	if !homedir.Exists(tokenFile) {
+		return Client{}, fmt.Errorf("Token file %s does not exist", tokenFile)
+	}
+
+	return Client{SecretFile: secretFile, TokenFile: tokenFile}, nil
+
 }

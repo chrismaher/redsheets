@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"text/tabwriter"
+
+	"github.com/chrismaher/redsheets/homedir"
 )
 
 type Table struct {
@@ -31,12 +33,9 @@ func NewMap(id, sheet, schema, name string) Map {
 
 // Read the JSON file into a slice of Table
 func (d *DataStore) Read() error {
-	// test if datastore does not exist yet
-	if _, err := os.Stat(d.Path); os.IsNotExist(err) {
-		if err := ioutil.WriteFile(d.Path, []byte("[]"), 0644); err != nil {
-			return err
-		}
+	if err := homedir.CreateIfNotExists(d.Path, []byte("[]")); err != nil {
 		fmt.Printf("%s created\n", d.Path)
+		return err
 	} else {
 		b, err := ioutil.ReadFile(d.Path)
 		if err != nil {
